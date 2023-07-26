@@ -60,7 +60,7 @@ int main(void) {
 
 
     while (1){
-        if (fgets(input, 100, stdin)){
+        if (fgets(input, 1000, stdin)){
             analyzeMessage(input);
         }else{
             break;
@@ -193,7 +193,10 @@ p_station find_station_iterative(p_station highway, int km){
     }
 
     p_station tmp = highway;
-    while (tmp->km != km && tmp != NULL){
+    while (tmp != NULL){
+        if (tmp->km == km){
+            return tmp;
+        }
         if (tmp->km > km){
             tmp = tmp->left;
         }else{
@@ -230,48 +233,97 @@ p_car delete_car(p_car cars, int fuel){
 }
 p_station delete_station(p_station highway, int km){
     p_station tmp = find_station_iterative(highway, km);
+
     if (tmp == NULL){
         printf("non demolita\n");
         return highway;
     }else{
-        if (tmp->left == NULL && tmp->right == NULL){
+        if (tmp->parent != NULL && tmp->left == NULL && tmp->right == NULL){
             if (tmp->parent->left == tmp){
                 tmp->parent->left = NULL;
             }else{
                 tmp->parent->right = NULL;
             }
+            in_order_free_cars_iterative(tmp->cars);
             free(tmp);
             printf("demolita\n");
             return highway;
-        }else if (tmp->left == NULL){
+        }else if (tmp->parent != NULL && tmp->left == NULL){
             if (tmp->parent->left == tmp){
                 tmp->parent->left = tmp->right;
+                tmp->right->parent = tmp->parent;
             }else{
                 tmp->parent->right = tmp->right;
+                tmp->right->parent = tmp->parent;
             }
+            in_order_free_cars_iterative(tmp->cars);
             free(tmp);
             printf("demolita\n");
             return highway;
-        }else if (tmp->right == NULL){
+        }else if (tmp->parent != NULL && tmp->right == NULL){
             if (tmp->parent->left == tmp){
                 tmp->parent->left = tmp->left;
+                tmp->left->parent = tmp->parent;
             }else{
                 tmp->parent->right = tmp->left;
+                tmp->left->parent = tmp->parent;
             }
+            in_order_free_cars_iterative(tmp->cars);
             free(tmp);
             printf("demolita\n");
             return highway;
         }else{
+            if (tmp->parent == NULL && tmp->right == NULL && tmp->left == NULL ){
+                in_order_free_cars_iterative(tmp->cars);
+                free(tmp);
+                printf("demolita\n");
+                return NULL;
+            }
+            if (tmp->parent == NULL && tmp ->right == NULL && tmp->left != NULL){
+                tmp->left->parent = NULL;
+                stations = tmp->left;
+                in_order_free_cars_iterative(tmp->cars);
+                free(tmp);
+                printf("demolita\n");
+                return stations;
+            }
+            if (tmp->parent == NULL && tmp ->right != NULL && tmp->left == NULL){
+                tmp->right->parent = NULL;
+                stations = tmp->right;
+                in_order_free_cars_iterative(tmp->cars);
+                free(tmp);
+                printf("demolita\n");
+                return stations;
+            }
+            //se è un nodo NON foglia
             p_station min = tmp->right;
+            //cerco il minimo
             while (min->left != NULL){
                 min = min->left;
             }
-            tmp->km = min->km;
-            tmp->cars = min->cars;
-            tmp->fast_car = min->fast_car;
-            tmp->right = delete_station(tmp->right, min->km);
+            if (tmp->parent == NULL){
+                //se sono la radice
+                min->left = tmp->left;
+                tmp->left->parent = min;
+                stations = tmp->right;
+                tmp->right->parent = NULL;
+            }else if (tmp->parent->right == tmp){
+                //se sono il figlio destro del padre
+                min->left = tmp->left;
+                tmp->left->parent = min;
+                tmp->parent->right = tmp->right;
+                tmp->right->parent = tmp->parent;
+            }else{
+                //se sono il figlio sinistro del padre
+                min->left = tmp->left;
+                tmp->left->parent = min;
+                tmp->parent->left = tmp->right;
+                tmp->right->parent = tmp->parent;
+            }
+            in_order_free_cars_iterative(tmp->cars);
+            free(tmp);
             printf("demolita\n");
-            return highway;
+            return stations;
         }
     }
 }
@@ -282,33 +334,20 @@ void add_station_command(char* message){
     if (param != NULL){
         param += strlen(prefix);
     }
-    char *km_str = malloc(2*sizeof (char));
+
+
     char* end_ptr;
-    strncpy(km_str, param, 2);
-    int km = (int)strtol(km_str, &end_ptr, 10);
-    char* tmp = " ";
-    strcat(km_str, tmp);
-    char* cars_str = strstr(param,km_str);
-
-    if (cars_str!= NULL){
-        cars_str += strlen(km_str);
-    }
-    char* macchine = malloc(strlen(cars_str)*sizeof (char));
-    strcpy(macchine, cars_str);
-
-    int* cars_array = malloc(1*sizeof (int));
-
-    /*int cars_number = (int)strlen(cars_str)-1;
-
-    if (cars_number % 2 == 1){
-        cars_number = (cars_number+1)/2;
-    } else{
-        cars_number = cars_number/2;
-    }*/
-
     const char delimiter[] = " ";
     int index = 0;
-    char* token = strtok(macchine, delimiter);
+
+    //recupero il chilometro della strada
+    char* token = strtok(param, delimiter);
+    int km = (int) strtol(token, &end_ptr, 10);
+    //sposto la stringa e prendo il prossimo token
+    token = strtok(NULL, delimiter);
+
+    //creo un array di macchine
+    int* cars_array = malloc(1*sizeof (int));
     while (token != NULL) {
         cars_array[index] = (int) strtol(token, &end_ptr, 10);
         token = strtok(NULL, delimiter);
@@ -343,9 +382,9 @@ void in_order_free_cars_iterative(p_car cars){
         }else{
             p_car tmp2 = tmp;
             tmp = tmp->parent;
-            if (tmp->left == tmp2){
+            if (tmp != NULL && tmp->left == tmp2){
                 tmp->left = NULL;
-            }else{
+            }else if (tmp != NULL && tmp->right == tmp2){
                 tmp->right = NULL;
             }
             free(tmp2);
