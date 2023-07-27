@@ -39,6 +39,7 @@ p_car last_car_added = NULL;
 void analyzeMessage(char *message);
 p_car new_car(int fuel);
 p_car insert_car(p_car cars, int fuel);
+void add_car(int km, int fuel);
 p_station new_station(int km);
 p_station insert_station(p_station highway, int km, int* cars, int cars_number);
 p_station insert_station_iterative(p_station highway, int km, int* cars);
@@ -49,10 +50,13 @@ p_car delete_car(p_car cars, int fuel);
 p_station delete_station(p_station highway, int km);
 void add_station_command(char* message);
 void remove_station_command(char* message);
+void add_car_command(char* message);
+void remove_car_command(char* message);
 void in_order_free_cars_iterative(p_car cars);
 
 
-
+//#############################################################
+//-------------------------MAIN-----
 
 int main(void) {
     char *input = malloc(100 * sizeof(char));
@@ -69,6 +73,8 @@ int main(void) {
     }
     return 0;
 }
+//#############################################################
+//-------------------------FUNZIONI-----
 
 void analyzeMessage(char* message){
     if (strncmp(message,"aggiungi-stazione",17) == 0) {
@@ -76,6 +82,12 @@ void analyzeMessage(char* message){
     }
     if (strncmp(message,"demolisci-stazione",18) == 0){
         remove_station_command(message);
+    }
+    if (strncmp(message,"aggiungi-auto",13) == 0){
+        add_car_command(message);
+    }
+    if (strncmp(message,"rottama-auto",12) == 0){
+        remove_car_command(message);
     }
 }
 
@@ -222,13 +234,13 @@ p_car find_car(p_car cars, int fuel){
 }
 p_car delete_car(p_car cars, int fuel){
     p_car tmp = find_car(cars, fuel);
-    if (tmp != NULL && tmp->available > 1){
+    if (tmp != NULL && tmp->available > 0){
         tmp->available = tmp->available - 1;
         printf("rottamata\n");
         return cars;
     } else{
         printf("non rottamata\n");
-        return cars;
+        return NULL;
     }
 }
 p_station delete_station(p_station highway, int km){
@@ -362,16 +374,58 @@ void add_station_command(char* message){
 }
 void remove_station_command(char* message){
     const char* prefix = "demolisci-stazione ";
+    const char delimiter[] = " ";
     char* param = strstr(message, prefix);
     if (param != NULL){
         param += strlen(prefix);
     }
-    char *km_str = malloc(2*sizeof (char));
+    //char *km_str = malloc(2*sizeof (char));
     char* end_ptr;
-    strncpy(km_str, param, 2);
-    int km = (int)strtol(km_str, &end_ptr, 10);
+    char* token = strtok(param, delimiter);
+    int km = (int) strtol(token, &end_ptr, 10);
+    //strncpy(km_str, param, 2);
     stations = delete_station(stations, km);
 }
+
+//prende in input il messaggio "aggiungi-auto" seguito dal chilometro e dall'autonomia dell'auto.
+//aggiunge l'auto con l'autonomia data al km assegnato
+void add_car_command(char* message){
+    const char* prefix = "aggiungi-auto";
+    const char delimiter[] = " ";
+    char* param = strstr(message,prefix);
+    if (param != NULL){
+        param += strlen(prefix);
+    }
+    char* end_ptr;
+    char* token = strtok(param, delimiter);
+    int km = (int) strtol(token, &end_ptr, 10);
+    token = strtok(NULL, delimiter);
+    int fuel = (int) strtol(token,&end_ptr,10);
+    add_car(km,fuel);
+
+}
+void remove_car_command(char* message){
+    const char* prefix = "rottama-auto";
+    const char delimiter[] = " ";
+    char* param = strstr(message,prefix);
+    if (param != NULL){
+        param += strlen(prefix);
+    }
+    char* end_ptr;
+    char* token = strtok(param, delimiter);
+    int km = (int) strtol(token, &end_ptr, 10);
+    token = strtok(NULL, delimiter);
+    int fuel = (int) strtol(token,&end_ptr,10);
+
+    p_station tmp = find_station_iterative(stations,km);
+    if (tmp == NULL){
+        printf("non rottamata\n");
+        return;
+    }
+    p_car deleted_car = delete_car(tmp->cars,fuel);
+}
+
+
 void in_order_free_cars_iterative(p_car cars){
     p_car tmp = cars;
     while (tmp != NULL){
@@ -389,5 +443,16 @@ void in_order_free_cars_iterative(p_car cars){
             }
             free(tmp2);
         }
+    }
+}
+void add_car(int km, int fuel){
+    p_station tmp = find_station_iterative(stations,km);
+    if (tmp == NULL){
+        printf("non aggiunta\n");
+        return;
+    }
+    last_car_added = insert_car(tmp->cars,fuel);
+    if (last_car_added != NULL){
+        printf("aggiunta\n");
     }
 }
