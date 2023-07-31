@@ -34,6 +34,7 @@ p_car last_car_added = NULL;
 
 
 
+
 //#############################################################
 //-------------------------PROTOTIPI DI FUNZIONI-----
 void analyzeMessage(char *message);
@@ -46,13 +47,14 @@ p_station insert_station_iterative(p_station highway, int km, int* cars);
 p_station find_station(p_station highway, int km);
 p_station find_station_iterative(p_station highway, int km);
 p_car find_car(p_car cars, int fuel);
-p_car delete_car(p_car cars, int fuel);
+p_car delete_car(p_car cars, int fuel,p_car car_to_remove);
 p_station delete_station(p_station highway, int km);
 void add_station_command(char* message);
 void remove_station_command(char* message);
 void add_car_command(char* message);
 void remove_car_command(char* message);
 void in_order_free_cars_iterative(p_car cars);
+p_car remove_node_car_from_station(p_car car,p_car deleted_car);
 
 
 //#############################################################
@@ -229,13 +231,23 @@ p_car find_car(p_car cars, int fuel){
         }else{
             tmp = tmp->right;
         }
-    } while (tmp->fuel != fuel);
+    } while (tmp != NULL && tmp->fuel != fuel);
     return tmp;
 }
-p_car delete_car(p_car cars, int fuel){
-    p_car tmp = find_car(cars, fuel);
+p_car delete_car(p_car cars, int fuel,p_car car_to_remove){
+    p_car tmp;
+    if (car_to_remove != NULL){
+        tmp = car_to_remove;
+    }else{
+        tmp = find_car(cars, fuel);
+    }
     if (tmp != NULL && tmp->available > 0){
         tmp->available = tmp->available - 1;
+
+        if (tmp->available == 0){
+            cars = remove_node_car_from_station(cars, tmp);
+        }
+
         printf("rottamata\n");
         return cars;
     } else{
@@ -417,12 +429,18 @@ void remove_car_command(char* message){
     token = strtok(NULL, delimiter);
     int fuel = (int) strtol(token,&end_ptr,10);
 
-    p_station tmp = find_station_iterative(stations,km);
-    if (tmp == NULL){
+    p_station tmp_found_station = find_station_iterative(stations, km);
+    if (tmp_found_station == NULL){
         printf("non rottamata\n");
         return;
     }
-    p_car deleted_car = delete_car(tmp->cars,fuel);
+    p_car car_to_remove = find_car(tmp_found_station->cars,fuel);
+    if (car_to_remove == tmp_found_station->fast_car) {
+        tmp_found_station->fast_car = car_to_remove->parent;
+    }
+
+
+    tmp_found_station->cars = delete_car(tmp_found_station->cars, fuel,car_to_remove);
 }
 
 
@@ -451,8 +469,91 @@ void add_car(int km, int fuel){
         printf("non aggiunta\n");
         return;
     }
-    last_car_added = insert_car(tmp->cars,fuel);
+    tmp->cars = insert_car(tmp->cars,fuel);
     if (last_car_added != NULL){
         printf("aggiunta\n");
+        //controllo se la macchina aggiunta è più veloce di quella più veloce
+        if (tmp->fast_car != NULL && tmp->fast_car->fuel < fuel && last_car_added != tmp->fast_car && last_car_added->parent == tmp->fast_car){
+            tmp->fast_car = last_car_added;
+        }
     }
 }
+//rimuove il nodo car dall'albero cars e modifica a sua volta l'albero che contiene quel nodo
+p_car remove_node_car_from_station(p_car cars,p_car deleted_car){
+    p_car tmp = deleted_car;
+    if (tmp->parent != NULL && tmp->left == NULL && tmp->right == NULL){
+        if (tmp->parent->left == tmp){
+            tmp->parent->left = NULL;
+        }else{
+            tmp->parent->right = NULL;
+        }
+        free(tmp);
+        return cars;
+    }else if(tmp->parent != NULL && tmp->left == NULL){
+        if (tmp->parent->left == tmp){
+            tmp->parent->left = tmp->right;
+            tmp->right->parent = tmp->parent;
+        }else{
+            tmp->parent->right = tmp->right;
+            tmp->right->parent = tmp->parent;
+        }
+        free(tmp);
+        return cars;
+    }else if(tmp->parent != NULL && tmp->right == NULL){
+        if (tmp->parent->left == tmp){
+            tmp->parent->left = tmp->left;
+            tmp->left->parent = tmp->parent;
+        }else{
+            tmp->parent->right = tmp->left;
+            tmp->left->parent = tmp->parent;
+        }
+        free(tmp);
+        return cars;
+    }else{
+        if (tmp->parent == NULL && tmp->right == NULL && tmp->left == NULL ){
+            tmp->fuel = 0;
+            tmp->available = 0;
+            free(tmp);
+            return NULL;
+        }
+        if (tmp->parent == NULL && tmp ->right == NULL && tmp->left != NULL){
+            tmp->left->parent = NULL;
+            cars = tmp->left;
+            free(tmp);
+            return cars;
+        }
+        if (tmp->parent == NULL && tmp ->right != NULL && tmp->left == NULL){
+            tmp->right->parent = NULL;
+            cars = tmp->right;
+            free(tmp);
+            return cars;
+        }
+        //se è un nodo NON foglia
+        p_car min = tmp->right;
+        while (min->left != NULL){
+            min = min->left;
+        }
+        if (tmp->parent == NULL){
+            //se sono la radice
+            min->left = tmp->left;
+            tmp->left->parent = min;
+            cars = tmp->right;
+            tmp->right->parent = NULL;
+        }else if (tmp->parent->right == tmp){
+            //se sono il figlio destro del padre
+            min->left = tmp->left;
+            tmp->left->parent = min;
+            tmp->parent->right = tmp->right;
+            tmp->right->parent = tmp->parent;
+        }else{
+            //se sono il figlio sinistro del padre
+            min->left = tmp->left;
+            tmp->left->parent = min;
+            tmp->parent->left = tmp->right;
+            tmp->right->parent = tmp->parent;
+        }
+        free(tmp);
+        return cars;
+    }
+}
+
