@@ -18,6 +18,7 @@ typedef t_car* p_car;
 
 typedef struct s_station{
     int km;
+    int cars_number;
     p_car cars;
     p_car fast_car;
     struct s_station* left;
@@ -43,11 +44,10 @@ p_car insert_car(p_car cars, int fuel);
 void add_car(int km, int fuel);
 p_station new_station(int km);
 p_station insert_station(p_station highway, int km, int* cars, int cars_number);
-p_station insert_station_iterative(p_station highway, int km, int* cars);
-p_station find_station(p_station highway, int km);
+p_station insert_station_iterative(p_station highway, int km,bool* new);
 p_station find_station_iterative(p_station highway, int km);
 p_car find_car(p_car cars, int fuel);
-p_car delete_car(p_car cars, int fuel,p_car car_to_remove);
+p_car delete_car(p_car cars, int fuel,p_car car_to_remove,bool* removed);
 p_station delete_station(p_station highway, int km);
 void add_station_command(char* message);
 void remove_station_command(char* message);
@@ -55,23 +55,33 @@ void add_car_command(char* message);
 void remove_car_command(char* message);
 void in_order_free_cars_iterative(p_car cars);
 p_car remove_node_car_from_station(p_car car,p_car deleted_car);
+char my_get_char();
 
 
 //#############################################################
 //-------------------------MAIN-----
 
 int main(void) {
-    char *input = malloc(100 * sizeof(char));
+    char input[3000];
+    char c;
+    bool eof = false;
 
-
-
-    while (1){
-        if (fgets(input, 1000, stdin)){
+    while (!eof){
+        int index = 0;
+        while ((c = my_get_char()) != '\n' && c != '\0'){
+            if (c == EOF){
+                eof = true;
+                break;
+            }
+            input[index++] = c;
+        }
+        input[index] = '\0';
+        analyzeMessage(input);
+        /*if (fgets(input, sizeof(input), stdin)){
             analyzeMessage(input);
         }else{
             break;
-        }
-
+        }*/
     }
     return 0;
 }
@@ -93,6 +103,11 @@ void analyzeMessage(char* message){
     }
 }
 
+char my_get_char(){
+    char c = getchar_unlocked();
+    return c;
+}
+
 
 p_car new_car(int fuel){
     p_car new = malloc(sizeof(t_car));
@@ -103,28 +118,44 @@ p_car new_car(int fuel){
     new->parent = NULL;
     return new;
 }
-p_car insert_car(p_car cars, int fuel){
-    if (cars != NULL && cars->fuel == fuel){
-        cars->available = cars->available + 1;
-        return cars;
-    }
-    if (cars == NULL){
-        last_car_added = new_car(fuel);
-        return last_car_added;
-    }
-    if (fuel < cars->fuel){
-        cars->left = insert_car(cars->left, fuel);
-        cars->left->parent = cars;
-    }else{
-        cars->right = insert_car(cars->right, fuel);
-        cars->right->parent = cars;
-    }
 
+p_car insert_car(p_car cars, int fuel){
+    //insert car iterative and return root cars
+    p_car tmp = cars;
+    p_car prec = cars;
+
+    while (tmp != NULL){
+        if (tmp->fuel == fuel){
+            tmp->available++;
+            return cars;
+        }
+        if (fuel < tmp->fuel){
+            prec = tmp;
+            tmp = tmp->left;
+        } else{
+            prec = tmp;
+            tmp = tmp->right;
+        }
+    }
+    tmp = new_car(fuel);
+    last_car_added = tmp;
+    if(prec == NULL){
+        cars = tmp;
+    }else{
+        if (fuel < prec->fuel){
+            prec->left = tmp;
+            tmp->parent = prec;
+        }else if (fuel > prec->fuel){
+            prec->right = tmp;
+            tmp->parent = prec;
+        }
+    }
     return cars;
 }
 p_station new_station(int km){
     p_station new = malloc(sizeof(t_station));
     new->km = km;
+    new->cars_number = 0;
     new->cars = NULL;
     new->fast_car = NULL;
     new->left = NULL;
@@ -162,48 +193,42 @@ p_station insert_station(p_station highway, int km, int* cars, int cars_number){
     }
     return highway;
 }
-p_station insert_station_iterative(p_station highway, int km, int* cars){
+p_station insert_station_iterative(p_station highway, int km, bool* new){
     p_station tmp = highway;
+    p_station prec = highway;
     while (tmp != NULL){
         if (tmp->km == km){
             printf("non aggiunta\n");
+            *new = false;
             return highway;
         }
         if (km < tmp->km){
+            prec = tmp;
             tmp = tmp->left;
         }else{
+            prec = tmp;
             tmp = tmp->right;
         }
     }
-    p_station new_p_station = new_station(km);
-    for (int i = 0; i < sizeof(cars); i++) {
-        new_p_station->cars = insert_car(new_p_station->cars, cars[i]);
-        if (new_p_station->fast_car == NULL)
-            new_p_station->fast_car = new_p_station->cars;
-        else if (new_p_station->fast_car->fuel < cars[i])
-            new_p_station->fast_car = new_p_station->cars;
-
+    tmp = new_station(km);
+    if (stations == NULL){
+        stations = tmp;
+    }
+    if (prec != NULL && km < prec->km){
+        prec->left = tmp;
+        tmp->parent = prec;
+    }else if(prec != NULL && km > prec->km){
+        prec->right = tmp;
+        tmp->parent = prec;
     }
     printf("aggiunta\n");
-    return highway;
-}
-p_station find_station(p_station highway, int km){
-    if (highway->km == km){
-        return highway;
-    }
-    p_station tmp = highway;
-    do {
-        if (tmp->km > km){
-            tmp = tmp->left;
-        }else{
-            tmp = tmp->right;
-        }
-    } while (tmp->km != km);
+    *new = true;
     return tmp;
 }
+
 p_station find_station_iterative(p_station highway, int km){
     if (highway == NULL){
-        return NULL;
+        return highway;
     }
 
     p_station tmp = highway;
@@ -234,7 +259,7 @@ p_car find_car(p_car cars, int fuel){
     } while (tmp != NULL && tmp->fuel != fuel);
     return tmp;
 }
-p_car delete_car(p_car cars, int fuel,p_car car_to_remove){
+p_car delete_car(p_car cars, int fuel,p_car car_to_remove,bool* removed){
     p_car tmp;
     if (car_to_remove != NULL){
         tmp = car_to_remove;
@@ -249,9 +274,11 @@ p_car delete_car(p_car cars, int fuel,p_car car_to_remove){
         }
 
         printf("rottamata\n");
+        *removed = true;
         return cars;
     } else{
         printf("non rottamata\n");
+        *removed = false;
         return NULL;
     }
 }
@@ -362,7 +389,7 @@ void add_station_command(char* message){
 
     char* end_ptr;
     const char delimiter[] = " ";
-    int index = 0;
+
 
     //recupero il chilometro della strada
     char* token = strtok(param, delimiter);
@@ -370,19 +397,32 @@ void add_station_command(char* message){
     //sposto la stringa e prendo il prossimo token
     token = strtok(NULL, delimiter);
 
-    //creo un array di macchine
-    int* cars_array = malloc(1*sizeof (int));
-    while (token != NULL) {
-        cars_array[index] = (int) strtol(token, &end_ptr, 10);
+    //il token successivo è il numero di macchine
+    int cars_number = (int) strtol(token, &end_ptr, 10);
+    //sposto la stringa e prendo il prossimo token
+    token = strtok(NULL, delimiter);
+    //i prossimi token sono le macchine
+    bool new = false;
+    p_station tmp_station = insert_station_iterative(stations,km,&new);
+    if (!new){
+        return;
+    }
+    tmp_station->cars_number = cars_number;
+    int index = 0;
+    while (token != NULL && index < cars_number) {
+        int fuel = (int) strtol(token, &end_ptr, 10);
+        tmp_station->cars = insert_car(tmp_station->cars, fuel);
+
+        if (tmp_station->fast_car == NULL) {
+            tmp_station->fast_car = tmp_station->cars;
+        }
+        if (tmp_station->fast_car->fuel < fuel){
+            tmp_station->fast_car = last_car_added;
+        }
+
         token = strtok(NULL, delimiter);
         index++;
-        if (token != NULL) {
-        cars_array = realloc(cars_array, (index + 1) * sizeof(int));
-        }
     }
-    int cars_number = index;
-
-    stations = insert_station(stations,km,cars_array,cars_number);
 }
 void remove_station_command(char* message){
     const char* prefix = "demolisci-stazione ";
@@ -439,8 +479,11 @@ void remove_car_command(char* message){
         tmp_found_station->fast_car = car_to_remove->parent;
     }
 
-
-    tmp_found_station->cars = delete_car(tmp_found_station->cars, fuel,car_to_remove);
+    bool removed = false;
+    tmp_found_station->cars = delete_car(tmp_found_station->cars, fuel,car_to_remove,&removed);
+    if (removed){
+        tmp_found_station->cars_number--;
+    }
 }
 
 
@@ -469,9 +512,14 @@ void add_car(int km, int fuel){
         printf("non aggiunta\n");
         return;
     }
+    if (tmp->cars_number == 512){
+        printf("non aggiunta\n");
+        return;
+    }
     tmp->cars = insert_car(tmp->cars,fuel);
     if (last_car_added != NULL){
         printf("aggiunta\n");
+        tmp->cars_number++;
         //controllo se la macchina aggiunta è più veloce di quella più veloce
         if (tmp->fast_car != NULL && tmp->fast_car->fuel < fuel && last_car_added != tmp->fast_car && last_car_added->parent == tmp->fast_car){
             tmp->fast_car = last_car_added;
