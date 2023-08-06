@@ -19,6 +19,7 @@ typedef t_car* p_car;
 typedef struct s_station{
     int km;
     int cars_number;
+    int id;
     p_car cars;
     p_car fast_car;
     struct s_station* left;
@@ -30,6 +31,7 @@ typedef t_station* p_station;
 
 p_station stations = NULL;
 p_car last_car_added = NULL;
+int id = 1;
 
 
 
@@ -53,9 +55,12 @@ void add_station_command(char* message);
 void remove_station_command(char* message);
 void add_car_command(char* message);
 void remove_car_command(char* message);
+void plan_route_command(char* message);
 void in_order_free_cars_iterative(p_car cars);
 p_car remove_node_car_from_station(p_car car,p_car deleted_car);
 char my_get_char();
+void plan_route_forward(int km1, int km2);
+p_station find_min_station(p_station highway, p_station km1_station, int km2);
 
 
 //#############################################################
@@ -77,11 +82,6 @@ int main(void) {
         }
         input[index] = '\0';
         analyzeMessage(input);
-        /*if (fgets(input, sizeof(input), stdin)){
-            analyzeMessage(input);
-        }else{
-            break;
-        }*/
     }
     return 0;
 }
@@ -100,6 +100,9 @@ void analyzeMessage(char* message){
     }
     if (strncmp(message,"rottama-auto",12) == 0){
         remove_car_command(message);
+    }
+    if(strncmp(message,"pianifica-percorso",18) == 0){
+        plan_route_command(message);
     }
 }
 
@@ -156,6 +159,7 @@ p_station new_station(int km){
     p_station new = malloc(sizeof(t_station));
     new->km = km;
     new->cars_number = 0;
+    new->id = 0;
     new->cars = NULL;
     new->fast_car = NULL;
     new->left = NULL;
@@ -520,6 +524,9 @@ void add_car(int km, int fuel){
     if (last_car_added != NULL){
         printf("aggiunta\n");
         tmp->cars_number++;
+        if (tmp->fast_car == NULL){
+            tmp->fast_car = last_car_added;
+        }
         //controllo se la macchina aggiunta è più veloce di quella più veloce
         if (tmp->fast_car != NULL && tmp->fast_car->fuel < fuel && last_car_added != tmp->fast_car && last_car_added->parent == tmp->fast_car){
             tmp->fast_car = last_car_added;
@@ -605,3 +612,105 @@ p_car remove_node_car_from_station(p_car cars,p_car deleted_car){
     }
 }
 
+//data una coppia di stazioni, pianificare il percorso con il minor numero di tappe tra di esse.
+// Nel caso siano presenti più percorsi con lo stesso numero minimo di tappe (cioè a pari merito),
+// deve essere scelto il percorso che predilige le tappe con distanza più breve dall’inizio dell’autostrada.
+void plan_route_command(char* message){
+    const char* prefix = "pianifica-percorso";
+    const char delimiter[] = " ";
+    char* param = strstr(message,prefix);
+    if (param != NULL){
+        param += strlen(prefix);
+    }
+    char* end_ptr;
+    char* token = strtok(param, delimiter);
+    int km1 = (int) strtol(token, &end_ptr, 10);
+    token = strtok(NULL, delimiter);
+    int km2 = (int) strtol(token,&end_ptr,10);
+    if (km1 < km2){
+        plan_route_forward(km1,km2);
+    }
+
+}
+void plan_route_forward(int km1, int km2){
+    p_station start_station = find_station_iterative(stations,km1);
+    p_station tmp = NULL;
+    p_station* array = malloc(sizeof(p_station*)*1);
+    int i = 0;
+    while (true){
+        if (tmp == NULL){
+            tmp = find_min_station(stations,start_station,km2);
+        } else{
+            tmp = find_min_station(stations,start_station,tmp->km);
+        }
+
+        if(tmp == NULL){
+            printf("nessun percorso\n");
+            free(array);
+            return;
+        }else{
+            if (i != 0 && tmp->km == array[i-1]->km){
+                printf("nessun percorso\n");
+                free(array);
+                return;
+            }
+            array[i] = tmp;
+            if(tmp->km == km1){
+                break;
+            }
+            i++;
+            array = realloc(array,sizeof(p_station*)*(i+1));
+        }
+    }
+    //array contiene tutte le stazioni intermedie tra km1 e km2 ma in ordine inverso. Stampo il percorso composto da km1, array, km2
+    for (int j = i; j >= 0; --j) {
+        printf("%d ",array[j]->km);
+    }
+    printf("%d\n",km2);
+    free(array);
+}
+
+//scorro tutte le stazioni tra km1 e km2 fino a quando non trovo una stazione tale che tmp->km > km1 e tmp->km < km2 e tmp->fast_car->fuel + tmp->km >= km2
+p_station find_min_station(p_station highway, p_station km1_station, int km2){
+    //creo una variabile booleana che mi dice se ho trovato la stazione di arrivo, se si, setto a true il booleano e aspetto che il ciclo attraversi tutto il suo sotto albero sinistro,
+    // una volta che il ciclo è arrivato alla fine del sotto albero sinistro,
+    // allora non ci sono altre stazioni tale che tmp->km > km1 e tmp->km < km2 e tmp->fast_car->fuel + tmp->km >= km2
+    bool found = false;
+    //p_station end = find_station_iterative(highway,km2);
+    //p_station start = find_station_iterative(highway,km1);
+    int km1 = km1_station->km;
+    p_station tmp = km1_station;
+    //p_station tmp = highway;
+    p_station valid_station = NULL;
+    while (tmp != NULL){
+        if(tmp->km == km2 && tmp->left == NULL && tmp->right == NULL
+            || tmp->km == km2 && tmp->left != NULL && tmp->left->id == id){
+            break;
+        }
+        if (tmp != NULL && tmp->km + tmp->fast_car->fuel >= km2 && tmp->km >= km1 && tmp->km <= km2){
+            if (valid_station == NULL || tmp->km < valid_station->km){
+                valid_station = tmp;
+            }
+        }
+        if (tmp->left != NULL && tmp->left->id != id && tmp->left->km >= km1 ){ //&& tmp->left->km <= km2
+            tmp = tmp->left;
+
+        }else if (tmp->right != NULL && tmp->right->id != id && tmp->right->km >= km1){  //&& tmp->left->km <= km2
+            tmp = tmp->right;
+
+        }else{
+            tmp->id = id;
+            if (tmp->parent == NULL){
+                if (tmp->right != NULL && tmp->right->id != id){
+                    tmp = tmp->right;
+                }else{
+                    break;
+                }
+            }else{
+                tmp = tmp->parent;
+            }
+        }
+    }
+    id++;
+    return valid_station;
+}
