@@ -69,10 +69,18 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
 //-------------------------MAIN-----
 
 int main(void) {
-    char input[3000];
+    char input[20000];
+
+    /*while (true){
+        if (fgets(input, 20000, stdin)){
+            analyzeMessage(input);
+        }else{
+            break;
+        }
+    }*/
+
     char c;
     bool eof = false;
-
     while (!eof){
         int index = 0;
         while ((c = my_get_char()) != '\n' && c != '\0'){
@@ -132,6 +140,7 @@ p_car insert_car(p_car cars, int fuel){
     while (tmp != NULL){
         if (tmp->fuel == fuel){
             tmp->available++;
+            last_car_added = tmp;
             return cars;
         }
         if (fuel < tmp->fuel){
@@ -680,8 +689,8 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
     p_station tmp = km1_station;
     p_station valid_station = NULL;
     while (tmp != NULL){
-        if(tmp->km == km2 && tmp->left == NULL && tmp->right == NULL
-            || tmp->km == km2 && tmp->left != NULL && tmp->left->id == id){
+        if((tmp->km == km2 && tmp->left == NULL && tmp->right == NULL)
+            || (tmp->km == km2 && tmp->left != NULL && tmp->left->id == id)){
             break;
         }
         if (tmp != NULL && tmp->km + tmp->fast_car->fuel >= km2 && tmp->km >= km1 && tmp->km <= km2){
@@ -781,13 +790,13 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
     p_station tmp = km1_station;
     p_station valid_station = NULL;
     while (tmp != NULL){
-        if(tmp->km == km2 && tmp->left == NULL && tmp->right == NULL
-           || tmp->km == km2 && tmp->right != NULL && tmp->right->id == id){
+        if((tmp->km == km2 && tmp->left == NULL && tmp->right == NULL)
+           || (tmp->km == km2 && tmp->right != NULL && tmp->right->id == id)){
             break;
         }
         int porcamadonna = tmp->km - tmp->fast_car->fuel;
         if (tmp != NULL && porcamadonna <= km2 && tmp->km <= km1 && tmp->km >= km2){
-            if (valid_station == NULL || valid_station != NULL && tmp->km < valid_station->km || valid_station != NULL && valid_station->km == km2){
+            if (valid_station == NULL || (valid_station != NULL && tmp->km < valid_station->km) || (valid_station != NULL && valid_station->km == km2)){
                 valid_station = tmp;
             }
         }
