@@ -58,7 +58,7 @@ void remove_car_command(char* message);
 void plan_route_command(char* message);
 void in_order_free_cars_iterative(p_car cars);
 p_car remove_node_car_from_station(p_car car,p_car deleted_car);
-char my_get_char();
+//char my_get_char();
 void plan_route_forward(int km1, int km2);
 p_station find_min_station(p_station highway, p_station km1_station, int km2);
 void plan_route_backward(int km1,int km2);
@@ -71,15 +71,15 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
 int main(void) {
     char input[20000];
 
-    /*while (true){
+    while (true){
         if (fgets(input, 20000, stdin)){
             analyzeMessage(input);
         }else{
             break;
         }
-    }*/
+    }
 
-    char c;
+    /*char c;
     bool eof = false;
     while (!eof){
         int index = 0;
@@ -92,7 +92,7 @@ int main(void) {
         }
         input[index] = '\0';
         analyzeMessage(input);
-    }
+    }*/
     return 0;
 }
 //#############################################################
@@ -116,10 +116,10 @@ void analyzeMessage(char* message){
     }
 }
 
-char my_get_char(){
+/*char my_get_char(){
     char c = getchar_unlocked();
     return c;
-}
+}*/
 
 
 p_car new_car(int fuel){
@@ -261,17 +261,17 @@ p_station find_station_iterative(p_station highway, int km){
 }
 
 p_car find_car(p_car cars, int fuel){
-    if (cars->fuel == fuel){
+    if (cars != NULL && cars->fuel == fuel){
         return cars;
     }
     p_car tmp = cars;
-    do {
+    while (tmp != NULL && tmp->fuel != fuel){
         if (tmp->fuel > fuel){
             tmp = tmp->left;
         }else{
             tmp = tmp->right;
         }
-    } while (tmp != NULL && tmp->fuel != fuel);
+    }
     return tmp;
 }
 p_car delete_car(p_car cars, int fuel,p_car car_to_remove,bool* removed){
@@ -760,11 +760,17 @@ void plan_route_backward(int km1,int km2){
             continue;
         }
         int max = array[j]->km - array[j]->fast_car->fuel;
-        for (int k = i; k >= 0 ; --k) {
+        for (int k = j; k >= 0 ; --k) {
             if (j != k){
                 if(array[k] != NULL && max > array[k]->km){
                     //gli elemnti tra j e k possono essere rimossi dal percorso
                     for (int l = j-1; l > k+1; --l) {
+                        array[l] = NULL;
+                    }
+                    break;
+                }
+                if (array[k] == array[0] && max < array[0]->km){
+                    for (int l = j-1; l >= 1; --l) {
                         array[l] = NULL;
                     }
                     break;
@@ -780,6 +786,7 @@ void plan_route_backward(int km1,int km2){
             printf("%d ",array[j]->km);
         }
     }
+    printf("\n");
     free(array);
 
 }
