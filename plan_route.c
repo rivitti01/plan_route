@@ -647,6 +647,10 @@ void plan_route_command(char* message){
 }
 void plan_route_forward(int km1, int km2){
     p_station start_station = find_station_iterative(stations,km1);
+    if (start_station == NULL){
+        printf("nessun percorso\n");
+        return;
+    }
     p_station tmp = NULL;
     p_station* array = malloc(sizeof(p_station*)*1);
     int i = 0;
@@ -693,7 +697,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
             || (tmp->km == km2 && tmp->left != NULL && tmp->left->id == id)){
             break;
         }
-        if (tmp != NULL && tmp->km + tmp->fast_car->fuel >= km2 && tmp->km >= km1 && tmp->km <= km2){
+        if (tmp != NULL && tmp->fast_car != NULL && tmp->km + tmp->fast_car->fuel >= km2 && tmp->km >= km1 && tmp->km <= km2){
             if (valid_station == NULL || tmp->km < valid_station->km){
                 valid_station = tmp;
             }
@@ -724,6 +728,10 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
 //km1 > km2
 void plan_route_backward(int km1,int km2){
     p_station start_station = find_station_iterative(stations,km1);
+    if (start_station == NULL){
+        printf("nessun percorso\n");
+        return;
+    }
     p_station tmp = NULL;
     p_station* array = malloc(sizeof(p_station*)*2);
     int i = 0;
@@ -801,8 +809,7 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
            || (tmp->km == km2 && tmp->right != NULL && tmp->right->id == id)){
             break;
         }
-        int porcamadonna = tmp->km - tmp->fast_car->fuel;
-        if (tmp != NULL && porcamadonna <= km2 && tmp->km <= km1 && tmp->km >= km2){
+        if (tmp != NULL && tmp->fast_car != NULL &&  tmp->km - tmp->fast_car->fuel <= km2 && tmp->km <= km1 && tmp->km >= km2){
             if (valid_station == NULL || (valid_station != NULL && tmp->km < valid_station->km) || (valid_station != NULL && valid_station->km == km2)){
                 valid_station = tmp;
             }
