@@ -63,6 +63,7 @@ void plan_route_forward(int km1, int km2);
 p_station find_min_station(p_station highway, p_station km1_station, int km2);
 void plan_route_backward(int km1,int km2);
 p_station find_min_station_backward(p_station highway, p_station km1_station, int km2);
+void free_all_stations(p_station highway);
 
 
 //#############################################################
@@ -93,6 +94,7 @@ int main(void) {
         input[index] = '\0';
         analyzeMessage(input);
     }*/
+    free_all_stations(stations);
     return 0;
 }
 //#############################################################
@@ -647,12 +649,8 @@ void plan_route_command(char* message){
 }
 void plan_route_forward(int km1, int km2){
     p_station start_station = find_station_iterative(stations,km1);
-    if (start_station == NULL){
-        printf("nessun percorso\n");
-        return;
-    }
     p_station tmp = NULL;
-    p_station* array = malloc(sizeof(p_station*)*1);
+    p_station* array = malloc(sizeof(p_station)*1);
     int i = 0;
     while (true){
         if (tmp == NULL){
@@ -681,6 +679,10 @@ void plan_route_forward(int km1, int km2){
     }
     //array contiene tutte le stazioni intermedie tra km1 e km2 ma in ordine inverso. Stampo il percorso composto da km1, array, km2
     for (int j = i; j >= 0; --j) {
+        if(j == 0){
+            printf("%d",array[j]->km);
+            break;
+        }
         printf("%d ",array[j]->km);
     }
     printf("%d\n",km2);
@@ -689,12 +691,15 @@ void plan_route_forward(int km1, int km2){
 
 //scorro tutte le stazioni tra km1 e km2 fino a quando non trovo una stazione tale che tmp->km > km1 e tmp->km < km2 e tmp->fast_car->fuel + tmp->km >= km2
 p_station find_min_station(p_station highway, p_station km1_station, int km2){
+    if (km1_station == NULL){
+        return NULL;
+    }
     int km1 = km1_station->km;
     p_station tmp = km1_station;
     p_station valid_station = NULL;
     while (tmp != NULL){
         if((tmp->km == km2 && tmp->left == NULL && tmp->right == NULL)
-            || (tmp->km == km2 && tmp->left != NULL && tmp->left->id == id)){
+           || (tmp->km == km2 && tmp->left != NULL && tmp->left->id == id)){
             break;
         }
         if (tmp != NULL && tmp->fast_car != NULL && tmp->km + tmp->fast_car->fuel >= km2 && tmp->km >= km1 && tmp->km <= km2){
@@ -728,12 +733,8 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
 //km1 > km2
 void plan_route_backward(int km1,int km2){
     p_station start_station = find_station_iterative(stations,km1);
-    if (start_station == NULL){
-        printf("nessun percorso\n");
-        return;
-    }
     p_station tmp = NULL;
-    p_station* array = malloc(sizeof(p_station*)*2);
+    p_station* array = malloc(sizeof(p_station)*1);
     int i = 0;
     array[i] = find_station_iterative(stations,km2);
     i++;
@@ -754,12 +755,13 @@ void plan_route_backward(int km1,int km2){
                 free(array);
                 return;
             }
+            array = realloc(array,sizeof(p_station*)*(i+1));
             array[i] = tmp;
             if(tmp->km == km1){
                 break;
             }
             i++;
-            array = realloc(array,sizeof(p_station*)*(i+1));
+            //array = realloc(array,sizeof(p_station*)*(i+1));
         }
     }
 
@@ -791,6 +793,10 @@ void plan_route_backward(int km1,int km2){
     //array contiene tutte le stazioni intermedie tra km1 e km2 ma in ordine inverso. Stampo il percorso composto da km1, array, km2
     for (int j = i; j >= 0; --j) {
         if (array[j] != NULL){
+            if(j == 0){
+                printf("%d",array[j]->km);
+                break;
+            }
             printf("%d ",array[j]->km);
         }
     }
@@ -809,7 +815,8 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
            || (tmp->km == km2 && tmp->right != NULL && tmp->right->id == id)){
             break;
         }
-        if (tmp != NULL && tmp->fast_car != NULL &&  tmp->km - tmp->fast_car->fuel <= km2 && tmp->km <= km1 && tmp->km >= km2){
+        //int porcamadonna = tmp->km - tmp->fast_car->fuel;
+        if (tmp != NULL && tmp->fast_car != NULL && tmp->km - tmp->fast_car->fuel <= km2 && tmp->km <= km1 && tmp->km >= km2){
             if (valid_station == NULL || (valid_station != NULL && tmp->km < valid_station->km) || (valid_station != NULL && valid_station->km == km2)){
                 valid_station = tmp;
             }
@@ -836,5 +843,14 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
     id++;
     return valid_station;
 
+}
+void free_all_stations(p_station highway){
+    if (highway == NULL){
+        return;
+    }
+    free_all_stations(highway->left);
+    free_all_stations(highway->right);
+    in_order_free_cars_iterative(highway->cars);
+    free(highway);
 }
 
