@@ -125,7 +125,7 @@ void analyzeMessage(char* message){
 
 
 p_car new_car(int fuel){
-    p_car new = malloc(sizeof(t_car));
+    p_car new = (p_car) malloc(sizeof(t_car) * 1);
     new->fuel = fuel;
     new->available = 1;
     new->left = NULL;
@@ -425,6 +425,9 @@ void add_station_command(char* message){
         return;
     }
     tmp_station->cars_number = cars_number;
+    if (cars_number == 0){
+        return;
+    }
     int index = 0;
     while (token != NULL && index < cars_number) {
         int fuel = (int) strtol(token, &end_ptr, 10);
@@ -486,14 +489,24 @@ void remove_car_command(char* message){
     token = strtok(NULL, delimiter);
     int fuel = (int) strtol(token,&end_ptr,10);
 
+
     p_station tmp_found_station = find_station_iterative(stations, km);
     if (tmp_found_station == NULL){
         printf("non rottamata\n");
         return;
     }
     p_car car_to_remove = find_car(tmp_found_station->cars,fuel);
+    if (car_to_remove == NULL ){
+        printf("non rottamata\n");
+        return;
+    }
     if (car_to_remove == tmp_found_station->fast_car) {
-        tmp_found_station->fast_car = car_to_remove->parent;
+        if (tmp_found_station->fast_car->parent != NULL){
+            tmp_found_station->fast_car = car_to_remove->parent;
+            while (tmp_found_station->fast_car->right != NULL){
+                tmp_found_station->fast_car = tmp_found_station->fast_car->right;
+            }
+        }
     }
 
     bool removed = false;
