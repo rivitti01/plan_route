@@ -65,6 +65,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2);
 void plan_route_backward(int km1,int km2);
 p_station find_min_station_backward(p_station highway, p_station km1_station, int km2);
 void free_all_stations(p_station highway);
+p_car find_fast_car(p_car pCar);
 
 
 //#############################################################
@@ -73,7 +74,7 @@ void free_all_stations(p_station highway);
 int main(void) {
     char input[20000];
     FILE *file;
-    file = fopen("archivio_test_aperti/open_108.txt","r");
+    file = fopen("archivio_test_aperti/open_111.txt","r");
     if (file == NULL){
         printf("Errore apertura file\n");
         return -1;
@@ -514,15 +515,30 @@ void remove_car_command(char* message){
         printf("non rottamata\n");
         return;
     }
-    if (car_to_remove == tmp_found_station->fast_car) {
-        tmp_found_station->fast_car = car_to_remove->parent;
+    bool find_new_fast_car = false;
+    if (car_to_remove == tmp_found_station->fast_car && car_to_remove->available == 1) {
+        find_new_fast_car = true;
     }
 
     bool removed = false;
     tmp_found_station->cars = delete_car(tmp_found_station->cars, fuel,car_to_remove,&removed);
     if (removed){
         tmp_found_station->cars_number--;
+        if (find_new_fast_car){
+            tmp_found_station->fast_car = find_fast_car(tmp_found_station->cars);
+        }
     }
+}
+//prende in input la root delle macchine e cerca la macchina con autonomia maggiore
+p_car find_fast_car(p_car cars) {
+    if (cars == NULL){
+        return NULL;
+    }
+    p_car tmp = cars;
+    while (tmp->right != NULL){
+        tmp = tmp->right;
+    }
+    return tmp;
 }
 
 
@@ -730,7 +746,8 @@ void plan_route_forward(int km1, int km2){
     array = NULL;
 }
 
-//scorro tutte le stazioni tra km1 e km2 fino a quando non trovo una stazione tale che tmp->km > km1 e tmp->km < km2 e tmp->fast_car->fuel + tmp->km >= km2
+//scorro tutte le stazioni tra km1 e km2 fino a quando non trovo una stazione tale che tmp->km > km1 e tmp->km < km2 e tmp->fast_car->fuel + tmp->km >= km2.
+//km1_station è la stazione di partenza e km2 è la stazione che devo raggiungere con un l'auto più veloce di una stazione tra km1 e km2. Se non trovo nessuna stazione, ritorno NULL
 p_station find_min_station(p_station highway, p_station km1_station, int km2){
     if (km1_station == NULL){
         return NULL;
@@ -774,7 +791,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
 }
 
 //km1 > km2
-void plan_route_backward(int km1,int km2){
+/*void plan_route_backward(int km1,int km2){
     p_station start_station = find_station_iterative(stations,km1);
     p_station tmp = NULL;
     p_station* array = malloc(sizeof(p_station)*1);
@@ -851,10 +868,10 @@ void plan_route_backward(int km1,int km2){
     free(array);
     array = NULL;
 
-}
+}*/
 //km1 > km2 --> km1_station ha km maggiore di km2. Il percorso va da km1 a km2
 //km1 partenza e km2 arrivo --> km1 grande ; km2 piccolo
-p_station find_min_station_backward(p_station highway, p_station km1_station, int km2){
+/*p_station find_min_station_backward(p_station highway, p_station km1_station, int km2){
     int km1 = km1_station->km;
     p_station tmp = km1_station;
     p_station valid_station = NULL;
@@ -897,7 +914,7 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
     id++;
     return valid_station;
 
-}
+}*/
 void free_all_stations(p_station highway){
     if (highway == NULL){
         return;
