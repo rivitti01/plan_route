@@ -5,6 +5,7 @@
 
 //#############################################################
 //-------------------------STRUTTURE DATI----------------------
+
 //struttura di una macchina
 typedef struct s_car{
     int fuel;
@@ -30,6 +31,14 @@ typedef struct s_station{
 //tipo puntatore a stazione
 typedef t_station* p_station;
 
+//struttura dati per una coda
+typedef struct s_queue{
+    p_station station;
+    struct s_queue* next;
+}t_queue;
+//tipo puntatore a coda
+typedef t_queue* p_queue;
+
 p_station stations = NULL;
 p_car last_car_added = NULL;
 int id = 1;
@@ -46,7 +55,6 @@ p_car new_car(int fuel);
 p_car insert_car(p_car cars, int fuel);
 void add_car(int km, int fuel);
 p_station new_station(int km);
-p_station insert_station(p_station highway, int km, int* cars, int cars_number);
 p_station insert_station_iterative(p_station highway, int km,bool* new);
 p_station find_station_iterative(p_station highway, int km);
 p_car find_car(p_car cars, int fuel);
@@ -65,16 +73,16 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2);
 void plan_route_backward(int km1,int km2);
 p_station find_min_station_backward(p_station highway, p_station km1_station, int km2);
 void free_all_stations(p_station highway);
-p_car find_fast_car(p_car pCar);
-
-
+p_car find_fast_car(p_car cars);
+p_station* breadth_first_search(p_station* array, int array_size);
+p_queue enqueue(p_queue pQueue, p_station station);
 //#############################################################
 //-------------------------MAIN-----
 
 int main(void) {
     char input[20000];
     FILE *file;
-    file = fopen("archivio_test_aperti/open_111.txt","r");
+    file = fopen("archivio_test_aperti/open_28.txt","r");
     if (file == NULL){
         printf("Errore apertura file\n");
         return -1;
@@ -89,6 +97,7 @@ int main(void) {
     fclose(file);
 
     /*char c;
+    char input[20000];
     bool eof = false;
     while (!eof){
         int index = 0;
@@ -102,7 +111,7 @@ int main(void) {
         input[index] = '\0';
         analyzeMessage(input);
     }*/
-    free_all_stations(stations);
+    //free_all_stations(stations);
     return 0;
 }
 //#############################################################
@@ -188,36 +197,7 @@ p_station new_station(int km){
     new->parent = NULL;
     return new;
 }
-p_station insert_station(p_station highway, int km, int* cars, int cars_number){
-    if (highway == NULL){
-        //return new_station(km);
-        p_station new_p_station = new_station(km);
-        for (int i = 0; i < cars_number; i++) {
-            new_p_station->cars = insert_car(new_p_station->cars, cars[i]);
-            if (new_p_station->fast_car == NULL) {
-                new_p_station->fast_car = new_p_station->cars;
-            }
-            if (new_p_station->fast_car->fuel < cars[i]){
-                new_p_station->fast_car = last_car_added;
-            }
-        }
-        highway = new_p_station;
-        printf("aggiunta\n");
-        return highway;
-    }
-    if (highway->km == km){
-        printf("non aggiunta\n");
-        return highway;
-    }
-    if (km < highway->km){
-        highway->left = insert_station(highway->left, km, cars,cars_number);
-        highway->left->parent = highway;
-    }else{
-        highway->right = insert_station(highway->right, km, cars,cars_number);
-        highway->right->parent = highway;
-    }
-    return highway;
-}
+
 p_station insert_station_iterative(p_station highway, int km, bool* new){
     p_station tmp = highway;
     p_station prec = highway;
@@ -693,7 +673,7 @@ void plan_route_command(char* message){
     if (km1 < km2){
         plan_route_forward(km1,km2);
     }else{
-        //plan_route_backward(km1,km2);
+        plan_route_backward(km1,km2);
     }
 
 }
@@ -771,6 +751,9 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
             tmp = tmp->left;
 
         }else if (tmp->right != NULL && tmp->right->id != id && tmp->right->km >= km1){
+            if (valid_station != NULL && tmp->right->km > valid_station->km){
+                break;
+            }
             tmp = tmp->right;
 
         }else{
@@ -780,6 +763,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
                     tmp = tmp->right;
                 }else{
                     break;
+                    //forse andrebbe return NULL
                 }
             }else{
                 tmp = tmp->parent;
@@ -791,7 +775,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
 }
 
 //km1 > km2
-/*void plan_route_backward(int km1,int km2){
+void plan_route_backward(int km1,int km2){
     p_station start_station = find_station_iterative(stations,km1);
     p_station tmp = NULL;
     p_station* array = malloc(sizeof(p_station)*1);
@@ -829,49 +813,159 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
         }
     }
 
-    for (int j = i; j >= 0; --j) {
-        if (array[j] == NULL){
-            continue;
-        }
-        int max = array[j]->km - array[j]->fast_car->fuel;
-        for (int k = j; k >= 0 ; --k) {
-            if (j != k){
-                if(array[k] != NULL && max > array[k]->km){
-                    //gli elemnti tra j e k possono essere rimossi dal percorso
-                    for (int l = j-1; l > k+1; --l) {
-                        array[l] = NULL;
-                    }
-                    break;
-                }
-                if (array[k] == array[0] && max < array[0]->km){
-                    for (int l = j-1; l >= 1; --l) {
-                        array[l] = NULL;
-                    }
-                    break;
-                }
-            }
-        }
+    p_station* path = breadth_first_search(array,i);
 
-    }
 
     //array contiene tutte le stazioni intermedie tra km1 e km2 ma in ordine inverso. Stampo il percorso composto da km1, array, km2
     for (int j = i; j >= 0; --j) {
-        if (array[j] != NULL){
+        if (path[j] != NULL){
             if(j == 0){
-                printf("%d",array[j]->km);
+                printf("%d",path[j]->km);
                 break;
             }
-            printf("%d ",array[j]->km);
+            printf("%d ",path[j]->km);
         }
     }
     printf("\n");
     free(array);
     array = NULL;
+    free(path);
+    path = NULL;
 
-}*/
+}
+//effettua una ricerca del percorso minimo partendo da array e calconando il nodo che una stazione può raggiungere con array[i]->km - array[i]->fast_car->fuel. Il nodo di partenza è array[i] e il nodo di arrivo è array[0]. L'array è ordinato in ordine crescente di km, ma il pianiicamento del percorso viene effettuato in ordine decrescente di km.
+p_station* breadth_first_search(p_station* array, int array_size){
+    id++;
+    //creo un array di interi dove ogni indice corrisponde a una stazione di array, e dentro ogni cella c'è la distanza che separa la stazione di partenza da quella analizzata
+    int* distances = malloc(sizeof(int)*array_size+1);
+    for (int i = array_size; i >= 0; --i) {
+        distances[i] = -1;
+    }
+    //creo un array di interi dove ogni indice corrisponde a una stazione di array, e dentro ogni cella c'è l'indice della stazione
+    int* parents = malloc(sizeof(int)*array_size+1);
+    for (int i = array_size; i >= 0; --i) {
+        parents[i] = -1;
+    }
+    //creo una coda di stazioni
+    p_queue queue = NULL;
+    //inserisco la stazione di partenza
+    queue = enqueue(queue,array[array_size]);
+    distances[array_size] = 0;
+    parents[array_size] = -1;
+    int index = array_size;
+    while(queue != NULL){
+        p_queue tmp = queue;
+        queue = queue->next;
+        p_station station_dequeued = tmp->station;
+        //-- cerco l'indice della stazione appera dequeued
+        int station_dequeued_index = -1;
+        for (int i = 0; i <= array_size; ++i) {
+            if (array[i] != NULL && array[i]->km == station_dequeued->km){
+                station_dequeued_index = i;
+                break;
+            }
+        }
+        free(tmp);
+        tmp = NULL;
+        p_station next_station;
+        //--cerco la prima stazione raggiungibile dalla stazione dequeued
+        int next_station_index = -1;
+        next_station = NULL;
+        for (int i = 0; i <= array_size; ++i) {
+            if (array[i] != NULL && array[i]->km >= station_dequeued->km - station_dequeued->fast_car->fuel && array[i]->id != id && array[i] != station_dequeued){
+                next_station = array[i];
+                next_station_index = i;
+                array[i]->id = id;
+                break;
+            }
+        }
+        //--
+        do {
+            if (next_station != NULL){
+                if (distances[next_station_index] == -1){
+                    distances[next_station_index] = distances[station_dequeued_index] + 1;
+                    parents[next_station_index] = station_dequeued->km;
+                    queue = enqueue(queue,next_station);
+                }
+                if (distances[station_dequeued_index] + 1 < distances[next_station_index]){
+                    distances[next_station_index] = distances[station_dequeued_index] + 1;
+                    parents[next_station_index] = station_dequeued->km;
+                    queue = enqueue(queue,next_station);
+                }
+                if (distances[station_dequeued_index] + 1 == distances[next_station_index] && parents[next_station_index] > station_dequeued->km){
+                    parents[next_station_index] = station_dequeued->km;
+                    queue = enqueue(queue,next_station);
+                }
+                if (next_station == array[0]){
+                    //ho trovato la stazione di arrivo
+                    break;
+                }
+                if (next_station_index + 1 < array_size){
+                    if (array[next_station_index + 1] != NULL && array[next_station_index +1]->km >= station_dequeued->km - station_dequeued->fast_car->fuel && array[next_station_index +1]->id != id && array[next_station_index + 1] != station_dequeued){
+                        next_station = array[next_station_index+1];
+                        next_station_index++;
+                        array[next_station_index]->id = id;
+                    }else{
+                        next_station = NULL;
+                    }
+                }else{
+                    next_station = NULL;
+                }
+            }
+        } while (next_station != NULL);
+        if (next_station == array[0]){
+            //ho trovato la stazione di arrivo
+            break;
+        }
+    }
+    //creo un array di stazioni che contiene il percorso minimo
+    p_station* path = malloc(sizeof(p_station)*array_size+1);
+    int next_path_station = parents[0];
+    path[0] = array[0];
+    path[array_size] = array[array_size];
+    for (int i = 1; i < array_size; ++i) {
+        if (array[i] != NULL && array[i]->km == next_path_station){
+            path[i] = array[i];
+            next_path_station = parents[i];
+            if (next_path_station == -1){
+                break;
+            }
+        }else{
+            path[i] = NULL;
+        }
+    }
+    free(distances);
+    distances = NULL;
+    free(parents);
+    parents = NULL;
+    return path;
+
+}
+
+//aggiunge alla coda una stazione
+p_queue enqueue(p_queue pQueue, p_station station){
+    p_queue tmp = pQueue;
+    if (tmp == NULL){
+        tmp = malloc(sizeof(t_station)*1);
+        tmp->station = station;
+        tmp->next = NULL;
+        pQueue = tmp;
+        return pQueue;
+    }
+    while (tmp->next != NULL){
+        tmp = tmp->next;
+    }
+    tmp->next = malloc(sizeof(t_queue)*1);
+    tmp->next->station = station;
+    tmp->next->next = NULL;
+    return pQueue;
+}
+
+
+//esempio: pianifica-percorso km1 = 1000 , km2 = 10
 //km1 > km2 --> km1_station ha km maggiore di km2. Il percorso va da km1 a km2
 //km1 partenza e km2 arrivo --> km1 grande ; km2 piccolo
-/*p_station find_min_station_backward(p_station highway, p_station km1_station, int km2){
+p_station find_min_station_backward(p_station highway, p_station km1_station, int km2){
     int km1 = km1_station->km;
     p_station tmp = km1_station;
     p_station valid_station = NULL;
@@ -901,7 +995,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
                 break;
             }
             if (tmp->parent == NULL){
-                if (tmp->right != NULL && tmp->right->id != id){
+                if (tmp->left != NULL && tmp->left->id != id){
                     tmp = tmp->left;
                 }else{
                     break;
@@ -914,7 +1008,7 @@ p_station find_min_station(p_station highway, p_station km1_station, int km2){
     id++;
     return valid_station;
 
-}*/
+}
 void free_all_stations(p_station highway){
     if (highway == NULL){
         return;
