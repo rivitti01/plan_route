@@ -81,20 +81,20 @@ p_queue enqueue(p_queue pQueue, p_station station);
 
 int main(void) {
     char input[20000];
-    FILE *file;
-    file = fopen("archivio_test_aperti/open_28.txt","r");
+    /*FILE *file;
+    file = fopen("archivio_test_aperti/open_101.txt","r");
     if (file == NULL){
         printf("Errore apertura file\n");
         return -1;
-    }
+    }*/
     while (true){
-        if (fgets(input, 20000, file)){
+        if (fgets(input, 20000, stdin)){
             analyzeMessage(input);
         }else{
             break;
         }
     }
-    fclose(file);
+    //fclose(file);
 
     /*char c;
     char input[20000];
@@ -852,7 +852,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
     queue = enqueue(queue,array[array_size]);
     distances[array_size] = 0;
     parents[array_size] = -1;
-    int index = array_size;
+
     while(queue != NULL){
         p_queue tmp = queue;
         queue = queue->next;
@@ -872,39 +872,44 @@ p_station* breadth_first_search(p_station* array, int array_size){
         int next_station_index = -1;
         next_station = NULL;
         for (int i = 0; i <= array_size; ++i) {
-            if (array[i] != NULL && array[i]->km >= station_dequeued->km - station_dequeued->fast_car->fuel && array[i]->id != id && array[i] != station_dequeued){
+            if (array[i] != NULL && array[i]->km >= station_dequeued->km - station_dequeued->fast_car->fuel  && array[i] != station_dequeued){//&& array[i]->id != id
                 next_station = array[i];
                 next_station_index = i;
-                array[i]->id = id;
+                //array[i]->id = id;
                 break;
             }
         }
         //--
         do {
             if (next_station != NULL){
-                if (distances[next_station_index] == -1){
+                if (distances[next_station_index] == - 1){
                     distances[next_station_index] = distances[station_dequeued_index] + 1;
                     parents[next_station_index] = station_dequeued->km;
                     queue = enqueue(queue,next_station);
+                }else{
+                    if (distances[station_dequeued_index] + 1 < distances[next_station_index]){
+                        distances[next_station_index] = distances[station_dequeued_index] + 1;
+                        parents[next_station_index] = station_dequeued->km;
+                        queue = enqueue(queue,next_station);
+                    }
+                    if (distances[station_dequeued_index] + 1 == distances[next_station_index]){
+                        if(array[station_dequeued_index]->km < parents[next_station_index]){
+                            parents[next_station_index] = array[station_dequeued_index]->km;
+                            queue = enqueue(queue,next_station);
+                        }
+                    }
                 }
-                if (distances[station_dequeued_index] + 1 < distances[next_station_index]){
-                    distances[next_station_index] = distances[station_dequeued_index] + 1;
-                    parents[next_station_index] = station_dequeued->km;
-                    queue = enqueue(queue,next_station);
-                }
-                if (distances[station_dequeued_index] + 1 == distances[next_station_index] && parents[next_station_index] > station_dequeued->km){
-                    parents[next_station_index] = station_dequeued->km;
-                    queue = enqueue(queue,next_station);
-                }
+
                 if (next_station == array[0]){
                     //ho trovato la stazione di arrivo
-                    break;
+                    //printf("next station è l'arrivo\n");
+                    //break;
                 }
                 if (next_station_index + 1 < array_size){
-                    if (array[next_station_index + 1] != NULL && array[next_station_index +1]->km >= station_dequeued->km - station_dequeued->fast_car->fuel && array[next_station_index +1]->id != id && array[next_station_index + 1] != station_dequeued){
+                    if (array[next_station_index + 1] != NULL && array[next_station_index +1]->km >= station_dequeued->km - station_dequeued->fast_car->fuel  && array[next_station_index + 1] != station_dequeued){//&& array[next_station_index +1]->id != id
                         next_station = array[next_station_index+1];
                         next_station_index++;
-                        array[next_station_index]->id = id;
+                        //array[next_station_index]->id = id;
                     }else{
                         next_station = NULL;
                     }
@@ -915,7 +920,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
         } while (next_station != NULL);
         if (next_station == array[0]){
             //ho trovato la stazione di arrivo
-            break;
+            //break;
         }
     }
     //creo un array di stazioni che contiene il percorso minimo
@@ -938,6 +943,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
     distances = NULL;
     free(parents);
     parents = NULL;
+    id++;
     return path;
 
 }
@@ -1019,4 +1025,3 @@ void free_all_stations(p_station highway){
     free(highway);
     highway = NULL;
 }
-
