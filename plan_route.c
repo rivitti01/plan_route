@@ -33,7 +33,7 @@ typedef t_station* p_station;
 
 //struttura dati per una coda
 typedef struct s_queue{
-    p_station station;
+    int index;
     struct s_queue* next;
 }t_queue;
 //tipo puntatore a coda
@@ -75,7 +75,7 @@ p_station find_min_station_backward(p_station highway, p_station km1_station, in
 void free_all_stations(p_station highway);
 p_car find_fast_car(p_car cars);
 p_station* breadth_first_search(p_station* array, int array_size);
-p_queue enqueue(p_queue pQueue, p_station station);
+p_queue enqueue(p_queue pQueue, int index);
 //#############################################################
 //-------------------------MAIN-----
 
@@ -854,22 +854,22 @@ p_station* breadth_first_search(p_station* array, int array_size){
     //creo una coda di stazioni
     p_queue queue = NULL;
     //inserisco la stazione di partenza
-    queue = enqueue(queue,array[array_size]);
+    queue = enqueue(queue,array_size);
 
 
 
     while(queue != NULL){
         p_queue tmp = queue;
         queue = queue->next;
-        p_station station_dequeued = tmp->station;
+        p_station station_dequeued = array[tmp->index];
         //-- cerco l'indice della stazione appera dequeued
-        int station_dequeued_index = -1;
-        for (int i = 0; i <= array_size; ++i) {
+        int station_dequeued_index = tmp->index;
+        /*for (int i = 0; i <= array_size; ++i) {
             if (array[i] != NULL && array[i]->km == station_dequeued->km){
                 station_dequeued_index = i;
                 break;
             }
-        }
+        }*/
         free(tmp);
         tmp = NULL;
         p_station next_station;
@@ -890,12 +890,12 @@ p_station* breadth_first_search(p_station* array, int array_size){
                 if (distances[next_station_index] == - 1){
                     distances[next_station_index] = distances[station_dequeued_index] + 1;
                     parents[next_station_index] = station_dequeued->km;
-                    queue = enqueue(queue,next_station);
+                    queue = enqueue(queue,next_station_index);
                 }else{
                     if (distances[station_dequeued_index] + 1 < distances[next_station_index]){
                         distances[next_station_index] = distances[station_dequeued_index] + 1;
                         parents[next_station_index] = station_dequeued->km;
-                        queue = enqueue(queue,next_station);
+                        queue = enqueue(queue,next_station_index);
                     }
                     if (distances[station_dequeued_index] + 1 == distances[next_station_index]){
                         if(array[station_dequeued_index]->km < parents[next_station_index]){
@@ -954,11 +954,11 @@ p_station* breadth_first_search(p_station* array, int array_size){
 }
 
 //aggiunge alla coda una stazione
-p_queue enqueue(p_queue pQueue, p_station station){
+p_queue enqueue(p_queue pQueue, int index){
     p_queue tmp = pQueue;
     if (tmp == NULL){
-        tmp = malloc(sizeof(t_station)*1);
-        tmp->station = station;
+        tmp = malloc(sizeof(t_queue)*1);
+        tmp->index = index;
         tmp->next = NULL;
         pQueue = tmp;
         return pQueue;
@@ -966,9 +966,10 @@ p_queue enqueue(p_queue pQueue, p_station station){
     while (tmp->next != NULL){
         tmp = tmp->next;
     }
-    tmp->next = malloc(sizeof(t_queue)*1);
-    tmp->next->station = station;
-    tmp->next->next = NULL;
+    p_queue last = malloc(sizeof(t_queue)*1);
+    tmp->next = last;
+    last->index = index;
+    last->next = NULL;
     return pQueue;
 }
 
