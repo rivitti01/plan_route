@@ -186,7 +186,7 @@ p_car insert_car(p_car cars, int fuel){
     return cars;
 }
 p_station new_station(int km){
-    p_station new = malloc(sizeof(t_station));
+    p_station new = malloc(sizeof(t_station)*1);
     new->km = km;
     new->cars_number = 0;
     new->id = 0;
@@ -812,7 +812,7 @@ void plan_route_backward(int km1,int km2){
             i++;
         }
     }
-
+    //printf("nessun percorso\n");
     p_station* path = breadth_first_search(array,i);
 
 
@@ -827,22 +827,27 @@ void plan_route_backward(int km1,int km2){
         }
     }
     printf("\n");
-    free(array);
-    array = NULL;
     free(path);
     path = NULL;
+    free(array);
+    array = NULL;
+
 
 }
 //effettua una ricerca del percorso minimo partendo da array e calconando il nodo che una stazione può raggiungere con array[i]->km - array[i]->fast_car->fuel. Il nodo di partenza è array[i] e il nodo di arrivo è array[0]. L'array è ordinato in ordine crescente di km, ma il pianiicamento del percorso viene effettuato in ordine decrescente di km.
 p_station* breadth_first_search(p_station* array, int array_size){
     id++;
     //creo un array di interi dove ogni indice corrisponde a una stazione di array, e dentro ogni cella c'è la distanza che separa la stazione di partenza da quella analizzata
-    int* distances = malloc(sizeof(int)*array_size+1);
+    int* distances = malloc(sizeof(int)*(array_size+1));
     for (int i = array_size; i >= 0; --i) {
-        distances[i] = -1;
+        if (i == array_size){
+            distances[array_size] = 0;
+        }else{
+            distances[i] = -1;
+        }
     }
     //creo un array di interi dove ogni indice corrisponde a una stazione di array, e dentro ogni cella c'è l'indice della stazione
-    int* parents = malloc(sizeof(int)*array_size+1);
+    int* parents = malloc(sizeof(int)*(array_size+1));
     for (int i = array_size; i >= 0; --i) {
         parents[i] = -1;
     }
@@ -850,8 +855,8 @@ p_station* breadth_first_search(p_station* array, int array_size){
     p_queue queue = NULL;
     //inserisco la stazione di partenza
     queue = enqueue(queue,array[array_size]);
-    distances[array_size] = 0;
-    parents[array_size] = -1;
+
+
 
     while(queue != NULL){
         p_queue tmp = queue;
@@ -895,7 +900,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
                     if (distances[station_dequeued_index] + 1 == distances[next_station_index]){
                         if(array[station_dequeued_index]->km < parents[next_station_index]){
                             parents[next_station_index] = array[station_dequeued_index]->km;
-                            queue = enqueue(queue,next_station);
+                            //queue = enqueue(queue,next_station);
                         }
                     }
                 }
@@ -924,7 +929,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
         }
     }
     //creo un array di stazioni che contiene il percorso minimo
-    p_station* path = malloc(sizeof(p_station)*array_size+1);
+    p_station* path = malloc(sizeof(p_station)*(array_size+1));
     int next_path_station = parents[0];
     path[0] = array[0];
     path[array_size] = array[array_size];
