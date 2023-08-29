@@ -82,7 +82,7 @@ p_queue enqueue(p_queue pQueue, int index);
 int main(void) {
     char input[20000];
     /*FILE *file;
-    file = fopen("archivio_test_aperti/open_101.txt","r");
+    file = fopen("extra_test_cases/open_extra_gen.txt","r");
     if (file == NULL){
         printf("Errore apertura file\n");
         return -1;
@@ -877,7 +877,7 @@ p_station* breadth_first_search(p_station* array, int array_size){
         int next_station_index = -1;
         next_station = NULL;
         for (int i = 0; i <= array_size; ++i) {
-            if (array[i] != NULL && array[i]->km >= station_dequeued->km - station_dequeued->fast_car->fuel  && array[i] != station_dequeued){//&& array[i]->id != id
+            if (array[i] != NULL && station_dequeued->fast_car != NULL && array[i]->km >= station_dequeued->km - station_dequeued->fast_car->fuel  && array[i] != station_dequeued){//&& array[i]->id != id
                 next_station = array[i];
                 next_station_index = i;
                 //array[i]->id = id;
